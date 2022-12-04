@@ -1,0 +1,24 @@
+{
+  "name": "employee-tracker",
+  "version": "1.0.0",
+  "description": "## Your Task",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/cgreer799/Employee-Tracker.git"
+  },
+  "author": "Christina Greer",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/cgreer799/Employee-Tracker/issues"
+  },
+  "homepage": "https://github.com/cgreer799/Employee-Tracker#readme",
+  "dependencies": {
+    "console.table": "^0.10.0",
+    "inquirer": "^8.2.5",
+    "mysql2": "^2.3.3"
+  }
+}
