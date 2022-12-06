@@ -1,4 +1,5 @@
 const mysql = require('mysql2');
+const promise = require('promise-mysql2');
 const table = require("console.table");
 const inquirer = require("inquirer");
 
@@ -9,8 +10,14 @@ const connection = mysql.createConnection({
   password: 'MYpdrmmbr1!'
 });
 
-// simple query
-async function createdb(){
+const promiseconnection = promise.createConnection({
+    host: 'localhost',
+    user: 'root',
+    password: 'MYpdrmmbr1!'
+  });
+
+
+function createdb(){
     connection.query('DROP DATABASE IF EXISTS employeedb;' , 
     function (err, result) {
         if (err) throw err;
@@ -24,7 +31,7 @@ async function createdb(){
     connection.query('USE employeedb;');
 }
 
-async function createSchema(){
+function createSchema(){
     connection.query('DROP TABLE IF EXISTS department;');
     connection.query('DROP TABLE IF EXISTS role;');
     connection.query('DROP TABLE IF EXISTS employee;');
@@ -55,22 +62,79 @@ async function createSchema(){
         CONSTRAINT managerFK FOREIGN KEY (managerId) REFERENCES employee(id));`
     );
 }
+//Creating Database and Schema
+createdb();
+createSchema();
 
 async function insertIntoDepartmentTable(name){
-    connection.query("INSERT INTO `department` (name) values ("+name+")",
-    function (err, result) {
-        if (err) throw err;
-        console.log(result);
+    inquirer.prompt([
+        {
+            type: 'input',
+            name: 'name',
+            message: "Please provide the name for this department."
+        }
+    ]).then(async (data) => {
+        name = data.name;
+        await connection.promise().query("INSERT INTO `department` (name) values ("+name+")").then(() => {
+            console.log("Succesfully added the " + name + " department to the database");
+            }).then(() => {
+                NextPrompt();
+            });
     });
 }
 async function insertIntoRoleTable(title,salary,departmentId){
-    connection.query("INSERT INTO `role` (title,salary,departmentId) values ("+title+","+salary+","+departmentId+")",
-    function (err, result) {
-        if (err) throw err;
-        console.log(result);
+    const [departmentrows] = await connection.promise().query('SELECT * FROM `role`');
+    const departmentarray =[];
+    for (var i=0;i<departmentrows.length;i++){
+        departmentarray.push((i+1)+" "+departmentrows[i].name.toString());
+    }
+    departmentarray.push("No Department");
+    inquirer.prompt([
+        {
+            type: 'input',
+            name: 'title',
+            message: "Please provide the title for this role."
+        },
+        {
+            type: 'input',
+            name: 'salary',
+            message: "Please provide the salary for this role."
+        },
+        {
+            type: 'list',
+            name: 'departmentname',
+            message: "Please select the department for this role.",
+            choices: departmentarray
+        }
+    ]).then(async (data)=>{
+        title = data.title;
+        salary = data.salary;
+        if(data.departmentname == "No Department") {
+            departmentId = 'NULL';
+        }
+        else {
+            departmentId = data.departmentname.charAt(0);
+        }
+        await connection.promise().query("INSERT INTO `role` (title,salary,departmentId) values ("+title+","+salary+","+departmentId+")").then(() => {
+            console.log("Succesfully added the " + title + " role to the database");
+            }).then(() => {
+                NextPrompt();
+            });
     });
 }
+
 async function insertIntoEmployeeTable(firstName,lastName,roleId,managerId){
+    const [rolerows] = await connection.promise().query('SELECT * FROM `role`');
+    const rolesarray =[];
+    for (var i=0;i<rolerows.length;i++){
+        rolesarray.push((i+1)+" "+rolerows[i].title.toString());
+    }
+    const [employeerows] = await connection.promise().query('SELECT * FROM `employee`');
+    const namessarray =[];
+    for (var i=0;i<employeerows.length;i++){
+        namessarray.push((i+1)+" "+employeerows[i].firstName.toString()+" "+employeerows[i].firstName.toString());
+    }
+    namessarray.push("No Manager/Employee is a Manager")
     inquirer.prompt([
         {
             type: 'input',
@@ -84,20 +148,33 @@ async function insertIntoEmployeeTable(firstName,lastName,roleId,managerId){
         },
         {
             type: 'list',
-            name: 'roleId',
+            name: 'roletitle',
             message: "Please provide the employee's role.",
-            choices: []
+            choices: rolesarray
         },
         {
-            type: 'input',
-            name: 'managerId',
-            message: "Please provide the employee's manager."
+            type: 'list',
+            name: 'managername',
+            message: "Please provide the employee's manager.",
+            choices: namessarray
         }
-]);
-    connection.query("INSERT INTO `employee` (firstName,lastName,roleId,managerId) values ("+firstName+","+lastName+","+roleId+","+managerId+")",
-    function (err, result) {
-        if (err) throw err;
-        console.log(result);
+        
+    ]).then(async (data)=>{
+        firstName = data.firstName;
+        lastName = data.lastName;
+        roleId = data.roletitle.charAt(0);
+        if(data.managername == "No Manager/Employee is a Manager") {
+            managerId = 'NULL';
+        }
+        else {
+            managerId = data.managername.charAt(0);
+        }
+        
+        await connection.promise().query("INSERT INTO `employee` (firstName,lastName,roleId,managerId) values ('"+firstName+"','"+lastName+"',"+roleId+","+managerId+")").then(() => {
+            console.log("Succesfully added " + firstName + " " + lastName + " to the database");
+        }).then(() => {
+            NextPrompt();
+        });
     });
 }
 
@@ -106,8 +183,8 @@ async function getAllFromDepartmentTable(){
     function(err, results) {
         if (err) throw err;
         console.table(results);
+        NextPrompt();
     });
-    NextPrompt();
 }
 
 async function getAllFromRoleTable(){
@@ -115,27 +192,23 @@ async function getAllFromRoleTable(){
     function(err, results) {
         if (err) throw err;
         console.table(results);
+        NextPrompt();
     });
-    NextPrompt();
 }
-async function getRolesFromRoleTable(){
-    connection.query('SELECT title FROM `role`',
-    function (err, result) {
-        if (err) throw err;
-        console.log(result);
-    });    
-}
+
 async function getAllFromEmployeeTable(){
     connection.query('SELECT * FROM `employee`',
     function(err, results) {
         if (err) throw err;
         console.table(results);
+        NextPrompt();
     });
-    NextPrompt();
+    
 }
 
-function MainMenuPrompt() { 
-    inquirer.prompt([{
+function MainMenuPrompt() {
+    inquirer.prompt([
+        {
         type: "list",
         name: "options",
         message: "Select an option",
@@ -148,61 +221,51 @@ function MainMenuPrompt() {
             "Add a department",
             "Finish",
         ]
-    }]).then(async (data) => {
+    }
+    ]).then((data) => {
         switch (data.options) {
-        case "View All Employees":
-            await getAllFromEmployeeTable();
-            break;
-        case "View Roles":
-            await getAllFromRoleTable();
-            break;
-        case "View Departments":
-            await getAllFromDepartmentTable();
-            break;
-        case "Add an Employee":
-            await insertIntoEmployeeTable();
-            break;
-        case "Add a Role":
-            await insertIntoRoleTable();
-            break;
-        case "Add a department":
-            await insertIntoDepartmentTable();
-            break;
-        case "Finish":
-            console.log("Done...");
-            connection.end();
-            break;
-        default:
-            console.log("default");
+            case "View All Employees":
+                getAllFromEmployeeTable();
+                break;
+            case "View Roles":
+                getAllFromRoleTable();
+                break;
+            case "View Departments":
+                getAllFromDepartmentTable();
+                break;
+            case "Add an Employee":
+                insertIntoEmployeeTable();
+                break;
+            case "Add a Role":
+                insertIntoRoleTable();
+                break;
+            case "Add a department":
+                insertIntoDepartmentTable();
+                break;
+            case "Finish":
+                console.log("Done...");
+                connection.end();
+                break;
         }
     });
 }
 function NextPrompt() {
     inquirer.prompt([{
+        type: "list",
         name: "NextPrompt",
-        type: "options",
         message: "Return to the main menu?",
         choices: [
             "Yes",
             "No"
         ]
-}]).then((data) => {
-      if (data.options == "yes") {
-        MainMenuPrompt();
-      } else {
-        console.log("Application terminated");
-        connection.end();
-      }
-});
+    }]).then((data) => {
+            if (data.NextPrompt == "Yes") {
+                MainMenuPrompt();
+            } else {
+                console.log("Application terminated");
+                connection.end();
+            }
+    });
 }
-createdb();
-createSchema();
-/*
 
-
-getAllFromDepartmentTable();
-*/
-insertIntoDepartmentTable("'Sales'");
-insertIntoRoleTable("'Manager'",100.01,1);
-getRolesFromRoleTable();
-connection.end();
+MainMenuPrompt();
