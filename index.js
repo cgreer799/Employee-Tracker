@@ -75,7 +75,7 @@ async function insertIntoDepartmentTable(name){
         }
     ]).then(async (data) => {
         name = data.name;
-        await connection.promise().query("INSERT INTO `department` (name) values ("+name+")").then(() => {
+        await connection.promise().query("INSERT INTO `department` (name) values ('"+name+"')").then(() => {
             console.log("Succesfully added the " + name + " department to the database");
             }).then(() => {
                 NextPrompt();
@@ -115,7 +115,7 @@ async function insertIntoRoleTable(title,salary,departmentId){
         else {
             departmentId = data.departmentname.charAt(0);
         }
-        await connection.promise().query("INSERT INTO `role` (title,salary,departmentId) values ("+title+","+salary+","+departmentId+")").then(() => {
+        await connection.promise().query("INSERT INTO `role` (title,salary,departmentId) values ('"+title+"','"+salary+"',"+departmentId+")").then(() => {
             console.log("Succesfully added the " + title + " role to the database");
             }).then(() => {
                 NextPrompt();
